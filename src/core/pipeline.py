@@ -195,7 +195,36 @@ class ClothingDetailPipeline:
                     else:
                         fail_msg = f"  ❌ [QC] 失败 ({color_reason or ''} {struct_reason or ''})"
                         print(fail_msg)
-                        if vton_attempt == settings.max_qc_retries:
+                        
+                        # 如果颜色不一致但结构完整，尝试颜色校正
+                        if not color_ok and struct_ok and vton_attempt == settings.max_qc_retries:
+                            print(f"  🔧 [Color Correction] 尝试自动颜色校正...")
+                            corrected_img = self.qc.apply_color_correction(
+                                generated=res_img,
+                                garment_original=garment_image,
+                                original_mask=mask,
+                                generated_mask=res_mask,
+                                correction_strength=0.8,
+                            )
+                            
+                            # 重新检查校正后的颜色
+                            color_corrected_ok, _ = self.qc.check_color_consistency(
+                                garment_original=garment_image, original_mask=mask,
+                                generated=corrected_img, generated_mask=res_mask,
+                            )
+                            
+                            if color_corrected_ok:
+                                tryon_results[i] = corrected_img
+                                vton_masks[i] = res_mask
+                                qc_passed[i] = True
+                                print(f"  ✅ [Color Correction] 颜色校正成功！")
+                            else:
+                                tryon_results[i] = res_img
+                                vton_masks[i] = res_mask
+                                qc_passed[i] = False
+                                print(f"  ⚠️ [Color Correction] 颜色校正效果有限，保留原图")
+                        
+                        if vton_attempt == settings.max_qc_retries and not qc_passed[i]:
                             tryon_results[i] = res_img
                             vton_masks[i] = res_mask
                             qc_passed[i] = False
