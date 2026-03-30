@@ -180,22 +180,61 @@ class ClothingDetailPipeline:
                         seed=current_seed + i,
                     )
 
-                    # QC 检查
+                    # QC 检查（多指标：颜色 + 纹理 + 特征）
                     color_ok, color_reason = self.qc.check_color_consistency(
+                        garment_original=garment_image, original_mask=mask,
+                        generated=res_img, generated_mask=res_mask,
+                        material=material,  # 使用材质特定阈值
+                    )
+                    texture_ok, texture_reason = self.qc.check_texture_preservation(
+                        garment_original=garment_image, original_mask=mask,
+                        generated=res_img, generated_mask=res_mask,
+                    )
+                    feature_ok, feature_reason = self.qc.check_feature_similarity(
                         garment_original=garment_image, original_mask=mask,
                         generated=res_img, generated_mask=res_mask,
                     )
                     struct_ok, struct_reason = self.qc.check_structure_integrity(res_img)
 
-                    if color_ok and struct_ok:
+                    if color_ok and texture_ok and feature_ok and struct_ok:
                         tryon_results[i] = res_img
                         vton_masks[i] = res_mask
                         qc_passed[i] = True
                         print(f"  ✅ [QC] 通过：{os.path.basename(pose_path)}")
                     else:
-                        fail_msg = f"  ❌ [QC] 失败 ({color_reason or ''} {struct_reason or ''})"
+                        fail_msg = f"  ❌ [QC] 失败 (颜色:{color_reason or '✓'} | 纹理:{texture_reason or '✓'} | 特征:{feature_reason or '✓'} | 结构:{struct_reason or '✓'})"
                         print(fail_msg)
-                        if vton_attempt == settings.max_qc_retries:
+                        
+                        # 如果颜色不一致但结构完整，尝试颜色校正
+                        if not color_ok and struct_ok and vton_attempt == settings.max_qc_retries:
+                            print(f"  🔧 [Color Correction] 尝试自动颜色校正...")
+                            corrected_img = self.qc.apply_color_correction(
+                                generated=res_img,
+                                garment_original=garment_image,
+                                original_mask=mask,
+                                generated_mask=res_mask,
+                                correction_strength=0.8,
+                            )
+                            
+                            # 重新检查校正后的颜色
+                            color_corrected_ok, _ = self.qc.check_color_consistency(
+                                garment_original=garment_image, original_mask=mask,
+                                generated=corrected_img, generated_mask=res_mask,
+                                material=material,
+                            )
+                            
+                            if color_corrected_ok:
+                                tryon_results[i] = corrected_img
+                                vton_masks[i] = res_mask
+                                qc_passed[i] = True
+                                print(f"  ✅ [Color Correction] 颜色校正成功！")
+                            else:
+                                tryon_results[i] = res_img
+                                vton_masks[i] = res_mask
+                                qc_passed[i] = False
+                                print(f"  ⚠️ [Color Correction] 颜色校正效果有限，保留原图")
+                        
+                        if vton_attempt == settings.max_qc_retries and not qc_passed[i]:
                             tryon_results[i] = res_img
                             vton_masks[i] = res_mask
                             qc_passed[i] = False
