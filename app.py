@@ -244,6 +244,9 @@ footer { display: none !important; }
     left: 0; top: 0;
     width: var(--sidebar-width) !important;
     z-index: 1000;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important; /* 上下分布 */
 }
 
 #logo-area { margin-bottom: 40px; }
@@ -255,15 +258,72 @@ footer { display: none !important; }
     padding: 12px 16px; border-radius: 12px;
     color: #4b5563; font-weight: 600; font-size: 14px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer; margin-bottom: 4px;
+    cursor: pointer; margin-bottom: 8px;
 }
 .side-nav-btn:hover { background: #f3f4f6; color: var(--primary); }
 .side-nav-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px var(--primary-glow); }
 
 #user-card {
-    position: absolute; bottom: 24px; left: 16px; right: 16px;
-    padding: 16px; background: #f8fafc; border-radius: 14px;
-    display: flex; align-items: center; gap: 12px;
+    /* 固定在侧边栏底部 */
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-top: auto; /* 自动推到剩余空间的末尾 */
+}
+
+/* 侧边栏按钮区域，为用户卡片留出空间 */
+#sidebar-col .side-nav-btn {
+    margin-bottom: 8px;
+}
+
+/* 主预览区图片显示优化 - 防止变形 */
+#preview-container .gallery-container {
+    width: 100%;
+    height: 640px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#preview-container .gallery-item {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#preview-container .gallery-item img {
+    object-fit: contain !important;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: auto;
+}
+
+/* 历史画廊图片显示优化 */
+#history-panel .gallery-container {
+    height: 180px;
+}
+
+#history-panel .gallery-item img {
+    object-fit: cover !important;
+    width: 100%;
+    height: 100%;
+}
+
+/* 姿态选择区图片显示优化 */
+#pose-selector .gallery-container {
+    height: 120px;
+}
+
+#pose-selector .gallery-item img {
+    object-fit: cover !important;
+    width: 100%;
+    height: 100%;
 }
 
 /* ── 主内容区 ── */
@@ -464,8 +524,10 @@ with gr.Blocks(
                 with gr.Column(scale=6):
                     with gr.Column(elem_id="preview-container"):
                         main_gallery = gr.Gallery(
-                            label="", show_label=False, columns=5, height=640, 
-                            object_fit="contain", preview=True, interactive=False
+                            label="", show_label=False, columns=5, 
+                            height=640, object_fit="contain",
+                            preview=True, interactive=False,
+                            elem_classes="main-gallery"
                         )
                         with gr.Row(elem_id="preview-controls"):
                             export = gr.Button("导出 / Export", variant="primary", elem_id="export-btn")

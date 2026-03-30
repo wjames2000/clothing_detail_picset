@@ -50,7 +50,16 @@ class SuperResolutionProcessor:
             tile_pad: tile 填充大小
         """
         self.model_name = model_name
-        self.ckpt_dir = ckpt_dir or os.path.join(os.path.dirname(os.path.dirname(__file__)), "ckpt")
+        # 使用配置文件中的 ckpt_dir，如果没有传入则使用项目根目录的 ckpt
+        if ckpt_dir:
+            self.ckpt_dir = ckpt_dir
+        else:
+            try:
+                from src.config import settings
+                self.ckpt_dir = settings.ckpt_dir
+            except Exception:
+                # 如果导入失败，使用默认路径（兼容旧版本）
+                self.ckpt_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ckpt")
         self.device = device or ("cuda" if torch and torch.cuda.is_available() else "cpu")
         self.tile = tile
         self.tile_pad = tile_pad

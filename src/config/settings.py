@@ -16,7 +16,7 @@ class Settings:
     )
     
     # 目录配置
-    base_dir: str = field(default_factory=lambda: os.path.dirname(os.path.dirname(__file__)))
+    base_dir: str = field(default_factory=lambda: os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     poses_dir: Optional[str] = None
     outputs_dir: Optional[str] = None
     ckpt_dir: Optional[str] = None
