@@ -1,0 +1,15 @@
+gradio>=4.0
+gradio_client>=0.8.0
+segment-anything
+torch>=2.0
+torchvision
+diffusers>=0.27
+transformers>=4.35
+accelerate
+safetensors
+pillow
+numpy
+opencv-python
+requests
+realesrgan
+basicsr
