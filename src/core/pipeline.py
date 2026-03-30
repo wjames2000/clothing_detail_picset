@@ -320,6 +320,30 @@ class ClothingDetailPipeline:
             valid_for_sr = [r for i, r in enumerate(final_results) if r is not None and qc_passed[i]]
 
             if valid_for_sr:
+                # 检查所有图片的尺寸是否一致
+                sizes = [(img.width, img.height) for img in valid_for_sr]
+                unique_sizes = set(sizes)
+                
+                if len(unique_sizes) > 1:
+                    print(f"⚠️  警告：检测到 {len(unique_sizes)} 种不同的图片尺寸：{unique_sizes}")
+                    print("📏 为保证超分后尺寸一致，将所有图片统一到最大尺寸...")
+                    
+                    # 找到最大尺寸
+                    max_width = max(size[0] for size in unique_sizes)
+                    max_height = max(size[1] for size in unique_sizes)
+                    target_size = (max_width, max_height)
+                    
+                    # 统一 resize 到最大尺寸
+                    resized_for_sr = []
+                    for img in valid_for_sr:
+                        if img.size != target_size:
+                            print(f"  - 调整图片尺寸：{img.size} → {target_size}")
+                            resized_for_sr.append(img.resize(target_size, Image.LANCZOS))
+                        else:
+                            resized_for_sr.append(img)
+                    
+                    valid_for_sr = resized_for_sr
+                
                 sr_valid = self.sr.batch_upscale(
                     valid_for_sr,
                     progress_callback=lambda cur, total: _progress("超分 4x", cur, total),
@@ -335,7 +359,34 @@ class ClothingDetailPipeline:
                 else:
                     sr_results.append(None)
         else:
-            sr_results = [None] * len(final_results)
+            # 如果不启用超分，也要保证输出尺寸一致
+            print("\n📏 检查输出图片尺寸一致性...")
+            valid_final = [r for i, r in enumerate(final_results) if r is not None]
+            if valid_final:
+                sizes = [(img.width, img.height) for img in valid_final]
+                unique_sizes = set(sizes)
+                
+                if len(unique_sizes) > 1:
+                    print(f"⚠️  检测到 {len(unique_sizes)} 种不同的图片尺寸：{unique_sizes}")
+                    print("📏 为保证输出尺寸一致，将所有图片统一到最大尺寸...")
+                    
+                    max_width = max(size[0] for size in unique_sizes)
+                    max_height = max(size[1] for size in unique_sizes)
+                    target_size = (max_width, max_height)
+                    
+                    unified_final = []
+                    for img in final_results:
+                        if img is not None and img.size != target_size:
+                            print(f"  - 调整图片尺寸：{img.size} → {target_size}")
+                            unified_final.append(img.resize(target_size, Image.LANCZOS))
+                        else:
+                            unified_final.append(img)
+                    
+                    sr_results = unified_final
+                else:
+                    sr_results = final_results
+            else:
+                sr_results = final_results
 
         # ── 保存结果 ────────────────────────────────────────────────────────────
         ts = int(time.time())

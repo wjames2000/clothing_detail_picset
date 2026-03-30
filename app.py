@@ -10,12 +10,17 @@ import random
 import gradio as gr
 from PIL import Image
 
-from pipeline import (
-    ClothingDetailPipeline, POSES_DIR, OUTPUTS_DIR, IDMVTON_URL,
-    MODEL_TYPE_DIRS, get_pose_files,
-    detect_material, detect_gender, detect_category, 
-    detect_ethnicity, detect_age_group, # [NEW] 导入新识别函数
-    DEFAULT_LIGHT_DIR,
+# 添加项目根目录到 Python 路径，确保能导入 src 模块
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from src.core.pipeline import (
+    ClothingDetailPipeline,
+)
+from src.config import settings
+from src.core.idmvton import get_pose_files
+from src.models.detectors import (
+    detect_material, detect_gender, detect_category,
+    detect_ethnicity, detect_age_group,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -32,9 +37,9 @@ def get_pipeline():
     with _pipeline_lock:
         if _pipeline is None:
             _pipeline = ClothingDetailPipeline(
-                idmvton_url=IDMVTON_URL,
-                poses_dir=POSES_DIR,
-                outputs_dir=OUTPUTS_DIR,
+                idmvton_url=settings.idmvton_url,
+                poses_dir=settings.poses_dir,
+                outputs_dir=settings.outputs_dir,
             )
     return _pipeline
 
@@ -435,7 +440,7 @@ with gr.Blocks(
                             else:
                                 suffix = "neutral"
                             mtype = f"{prefix}_{suffix}"
-                            return get_pose_files(POSES_DIR, mtype)[:6]
+                            return get_pose_files(settings.poses_dir, mtype)[:6]
 
                         gender.change(fn=update_poses_gallery, inputs=[gender, age_group], outputs=[pose_gallery])
                         age_group.change(fn=update_poses_gallery, inputs=[gender, age_group], outputs=[pose_gallery])
@@ -492,8 +497,7 @@ with gr.Blocks(
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    os.makedirs(POSES_DIR, exist_ok=True)
-    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    settings.ensure_dirs()
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,

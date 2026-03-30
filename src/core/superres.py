@@ -141,8 +141,13 @@ class SuperResolutionProcessor:
         print(f"[SR] {self.model_name} 加载完成")
 
     def upscale(self, image: Image.Image) -> Image.Image:
-        """对单张图像做 4 倍超分"""
+        """对单张图像做 4 倍超分，保持原始宽高比"""
         self._load()
+        
+        # 记录原始尺寸
+        original_width, original_height = image.size
+        print(f"[SR] 原始尺寸：{original_width}×{original_height}")
+        
         img_np = np.array(image.convert("RGB"))
         img_bgr = img_np[:, :, ::-1]
         
@@ -160,7 +165,24 @@ class SuperResolutionProcessor:
                 raise
         
         out_rgb = out_bgr[:, :, ::-1]
-        return Image.fromarray(out_rgb)
+        result = Image.fromarray(out_rgb)
+        
+        # 验证输出尺寸
+        output_width, output_height = result.size
+        expected_width = original_width * 4
+        expected_height = original_height * 4
+        
+        print(f"[SR] 超分后尺寸：{output_width}×{output_height} (期望：{expected_width}×{expected_height})")
+        
+        # 确保宽高比一致（允许 1 像素误差）
+        if abs(output_width - expected_width) > 1 or abs(output_height - expected_height) > 1:
+            print(f"[SR] ⚠️  警告：实际输出尺寸与预期不符，进行修正...")
+            # 如果差异很小，直接 resize 到精确的 4 倍
+            if abs(output_width / output_height - expected_width / expected_height) < 0.01:
+                result = result.resize((expected_width, expected_height), Image.LANCZOS)
+                print(f"[SR] ✓ 已修正为：{expected_width}×{expected_height}")
+        
+        return result
 
     def batch_upscale(
         self, 
