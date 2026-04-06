@@ -20,6 +20,21 @@ from src.models.detectors import (
 from src.models.quality import QualityChecker
 
 
+def _pad_to_size(image: Image.Image, target_size: tuple, fill_color: tuple = (255, 255, 255)) -> Image.Image:
+    """保持宽高比缩放，然后 padding 到目标尺寸，不破坏原始比例"""
+    orig_w, orig_h = image.size
+    target_w, target_h = target_size
+    ratio = min(target_w / orig_w, target_h / orig_h)
+    new_w = int(orig_w * ratio)
+    new_h = int(orig_h * ratio)
+    resized = image.resize((new_w, new_h), Image.LANCZOS)
+    padded = Image.new("RGB", target_size, fill_color)
+    x_offset = (target_w - new_w) // 2
+    y_offset = (target_h - new_h) // 2
+    padded.paste(resized, (x_offset, y_offset))
+    return padded
+
+
 class ClothingDetailPipeline:
     """
     完整流水线编排：
@@ -333,16 +348,16 @@ class ClothingDetailPipeline:
                     max_height = max(size[1] for size in unique_sizes)
                     target_size = (max_width, max_height)
                     
-                    # 统一 resize 到最大尺寸
-                    resized_for_sr = []
+                    # 统一 padding 到最大尺寸（保持宽高比）
+                    padded_for_sr = []
                     for img in valid_for_sr:
                         if img.size != target_size:
-                            print(f"  - 调整图片尺寸：{img.size} → {target_size}")
-                            resized_for_sr.append(img.resize(target_size, Image.LANCZOS))
+                            print(f"  - Padding 图片：{img.size} → {target_size}")
+                            padded_for_sr.append(_pad_to_size(img, target_size))
                         else:
-                            resized_for_sr.append(img)
+                            padded_for_sr.append(img)
                     
-                    valid_for_sr = resized_for_sr
+                    valid_for_sr = padded_for_sr
                 
                 sr_valid = self.sr.batch_upscale(
                     valid_for_sr,
@@ -377,8 +392,8 @@ class ClothingDetailPipeline:
                     unified_final = []
                     for img in final_results:
                         if img is not None and img.size != target_size:
-                            print(f"  - 调整图片尺寸：{img.size} → {target_size}")
-                            unified_final.append(img.resize(target_size, Image.LANCZOS))
+                            print(f"  - Padding 图片：{img.size} → {target_size}")
+                            unified_final.append(_pad_to_size(img, target_size))
                         else:
                             unified_final.append(img)
                     

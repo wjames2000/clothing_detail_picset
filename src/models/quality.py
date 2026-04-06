@@ -136,7 +136,7 @@ class QualityChecker:
         # OpenCV 的 cvtColor 期望 BGR 顺序输入
         bgr_normalized = rgb_normalized[:, :, ::-1]
         # 转换到 Lab，OpenCV 输出 L:[0,100], a:[-128,127], b:[-128,127]
-        lab = cv2.cvtColor(bgr_normalized, cv2.COLOR_RGB2LAB)
+        lab = cv2.cvtColor(bgr_normalized, cv2.COLOR_BGR2LAB)
         return lab
 
     @staticmethod

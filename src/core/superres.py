@@ -3,6 +3,7 @@ Real-ESRGAN 超分处理器
 基于 Real-ESRGAN 的 4 倍超分，针对服装面料纹理优化
 """
 import os
+import numpy as np
 from typing import Optional, List
 from PIL import Image
 
@@ -217,6 +218,3 @@ class SuperResolutionProcessor:
                 torch.cuda.empty_cache()
         return results
 
-
-# 需要导入 numpy
-import numpy as np

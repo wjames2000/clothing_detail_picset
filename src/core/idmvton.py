@@ -4,6 +4,7 @@ IDM-VTON 虚拟换装客户端
 """
 import os
 import tempfile
+import random
 from typing import Tuple, Optional, Dict, Any
 from PIL import Image
 
@@ -66,7 +67,7 @@ class IDMVTONClient:
         client = self._get_client()
 
         # 预处理：等比例缩放与填充 (防止变形)
-        human_padded, _ = resize_and_pad(human_image, target_size=(768, 1024))
+        human_padded, human_padding = resize_and_pad(human_image, target_size=(768, 1024))
         garm_padded, _ = resize_and_pad(garment_image, target_size=(768, 1024))
 
         # 将 PIL Image 保存为临时文件（Gradio Client 需要文件路径）
@@ -113,8 +114,8 @@ class IDMVTONClient:
             mask_img = Image.open(mask_path).convert("L")
 
             # 还原 padding 前的尺寸
-            out_img = unpad_and_resize(out_img, _, final_size=human_image.size)
-            mask_img = unpad_and_resize(mask_img, _, final_size=human_image.size)
+            out_img = unpad_and_resize(out_img, human_padding, final_size=human_image.size)
+            mask_img = unpad_and_resize(mask_img, human_padding, final_size=human_image.size)
 
             return out_img, mask_img
 
@@ -167,7 +168,6 @@ def get_pose_files(base_poses_dir: str, model_type: str) -> list:
     if files:
         print(f"[Pose Router] 找到 {len(files)} 张姿态图 (模型类型：{model_type})")
         if model_type.endswith("_neutral"):
-            import random
             random.Random(42).shuffle(files)
         return files
         

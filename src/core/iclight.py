@@ -95,7 +95,7 @@ class ICLightProcessor:
         transform = T.Compose([
             T.Resize((512, 512)),
             T.ToTensor(),
-            T.Normalize([0.5], [0.5]),
+            T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
         ])
         return transform(image).unsqueeze(0).to(
             self.device, 
